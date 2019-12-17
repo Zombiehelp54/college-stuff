@@ -1,0 +1,174 @@
+<html>
+<head>
+  <title> Learn Alphabets JS project </title>
+</head>
+<body>
+
+<div id=main>
+<h1> Learn the English Letters </h1>
+Enter number of letters: <input id="num" type=number> <button id="submit"> Generate </button>
+<div id="buttons">
+
+</div>
+
+<div id="images">
+
+</div>
+
+<br>
+
+<button onclick="displayEvents()"> Display Events </button>
+
+<table id="events" style="display:none;" border="1|0">
+<tr><th>Type</th> <th> Time </th> <th> Target </th> </tr>
+</table>
+
+</div>
+<script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+<script type="text/javascript">
+  charArr = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"];
+  startBtn = document.getElementById("submit");
+  buttons = document.getElementById("buttons");
+  images = document.getElementById("images");
+  function getRandomNumbers(min, max, n){
+    var result = [];
+    for(var i = 0;i<n ; i++){
+        var rand = Math.floor(Math.random() * (max - min + 1)) + min;
+        if(result.indexOf(rand) == -1){ // No duplicates
+            result.push(rand);
+        }
+        else
+         i--;
+    }
+    return result;
+  }
+  function isValid(num){
+    if(num <= 26 && num > 0)
+      return true;
+    return false;
+  }
+  function createImgBtn(n){
+    charBtn = document.createElement("button");
+    charBtn.innerHTML = charArr[n];
+    return charBtn;
+  }
+  function createImgElement(n){
+    imgElement = document.createElement("img");
+    imgElement.src = "images/" + charArr[n] + ".jpg";
+    imgElement.setAttribute("style", "display:none");
+    return imgElement;
+  }
+  function hideOthers(){
+      for(i=0;i<images.children.length;i++)
+        images.children[i].setAttribute("style", "display:none");
+  }
+  eventObject = function(type, target, time){
+    this.type = type;
+    this.target = target;
+    this.time = time;
+  }
+  localStorage.setItem('click-events', JSON.stringify([]));
+  localStorage.setItem('load-events', JSON.stringify([]));
+  localStorage.setItem('unload-events', JSON.stringify([]));
+  function storeEvent(e){
+    eventObj = new eventObject(e.type, e.target, e.timeStamp);
+    if(eventObj.type == "click"){
+      clickEvents = JSON.parse(localStorage.getItem('click-events'));
+      clickEvents.push(eventObj);
+      localStorage.setItem('click-events', JSON.stringify(clickEvents));
+    }
+    if(eventObj.type == "load"){
+      loadEvents = JSON.parse(localStorage.getItem('load-events'));
+      loadEvents.push(eventObj);
+      localStorage.setItem('load-events', JSON.stringify(loadEvents));
+    }
+    if(eventObj.type == "unload"){
+      unloadEvents = JSON.parse(localStorage.getItem('unload-events'));
+      unloadEvents.push(eventObj);
+      localStorage.setItem('unload-events', JSON.stringify(unloadEvents));
+    }
+  }
+  window.addEventListener("load", function(e){
+    storeEvent(e);
+  });
+  window.addEventListener("unload", function(e){
+    storeEvent(e);
+  });
+  startBtn.addEventListener("click", function(e){
+    storeEvent(e);
+    buttons.innerHTML = "";
+    images.innerHTML = "";
+    number = document.getElementById("num").value;
+    if(isValid(number)){
+      randomArr = getRandomNumbers(0,25, number);
+      for(i=0; i<randomArr.length; i++){
+        x = randomArr[i];
+        let btn = createImgBtn(x); // let to prevent it from getting hoisted
+        let img = createImgElement(x);
+        btn.addEventListener("click", function(ev){
+          storeEvent(ev);
+          hideOthers();
+          img.setAttribute("style", "display:block");
+        })
+        buttons.appendChild(btn);
+        images.appendChild(img);
+      }
+    }
+    else {
+      alert("Number should be between 1 and 26");
+    }
+  });
+  const interval = setInterval(function() {
+    let events = [];
+    if(localStorage.getItem('unload-events') != '[]'){
+      events.push(JSON.parse(localStorage.getItem('unload-events')));
+    }
+    if(localStorage.getItem('click-events') != '[]'){
+      events.push(JSON.parse(localStorage.getItem('click-events')));
+    }
+    if(localStorage.getItem('load-events') != '[]'){
+      events.push(JSON.parse(localStorage.getItem('load-events')));
+    }
+    if(events.length > 0){
+      $.ajax("events.php", {
+        data : JSON.stringify(events),
+        contentType : 'application/json',
+        type : 'POST',
+        success: function(){
+          localStorage.clear();
+          localStorage.setItem('click-events', JSON.stringify([]));
+          localStorage.setItem('load-events', JSON.stringify([]));
+          localStorage.setItem('unload-events', JSON.stringify([]));
+        }
+      });
+    }
+ }, 5000);
+  function displayEvents(){
+    events = document.getElementById("events");
+    events.innerHTML = "";
+    events.setAttribute("style", "display: block");
+    $.ajax("events.php", {
+      type : 'GET',
+      success: function(response){
+        response.forEach(function(event){
+          eventRow = document.createElement("tr");
+          type = document.createElement("td");
+          type.innerHTML = event["type"];
+          target = document.createElement("td");
+          target.innerHTML = JSON.stringify(event["target"]);
+          time = document.createElement("td");
+          time.innerHTML = event["time"];
+
+          eventRow.appendChild(type);
+          eventRow.appendChild(time);
+          eventRow.appendChild(target);
+
+          events.appendChild(eventRow);
+
+        });
+      }
+    });
+  }
+</script>
+</body>
+</html>
